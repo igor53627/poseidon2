@@ -1,0 +1,160 @@
+name: Security Testing - Quick Fuzz (15 min)
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/our-implementation/**'
+      - 'test/**'
+      - '.github/workflows/security-fuzz-quick.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/our-implementation/**'
+      - 'test/**'
+      - '.github/workflows/security-fuzz-quick.yml'
+  workflow_dispatch:
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  fuzz-testing-quick:
+    name: Quick Fuzz Testing (15 minutes)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install dependencies
+        run: |
+          cd packages/our-implementation
+          forge install
+          forge build
+
+      - name: Run Quick Fuzz Tests
+        run: |
+          cd packages/our-implementation
+          
+          echo "=== STARTING 15-MINUTE FUZZ TESTING ==="
+          echo "Started at: $(date)"
+          
+          # Run fuzz tests with optimized configuration for 15 minutes
+          forge test --match-contract FuzzTesting \
+            --fuzz-runs 1000 \
+            --fuzz-max-test-rejects 100000 \
+            --timeout 900 \
+            -vv \
+            2>&1 | tee fuzz-quick-results.txt
+          
+          echo "Completed at: $(date)"
+          
+      - name: Analyze Fuzz Results
+        if: always()
+        run: |
+          cd packages/our-implementation
+          
+          if [ -f fuzz-quick-results.txt ]; then
+            echo "=== FUZZ TESTING ANALYSIS ==="
+            
+            # Count test results
+            PASSED=$(grep -c "PASS" fuzz-quick-results.txt || echo "0")
+            FAILED=$(grep -c "FAIL" fuzz-quick-results.txt || echo "0")
+            
+            echo "Tests passed: $PASSED"
+            echo "Tests failed: $FAILED"
+            
+            # Extract unique test names
+            echo "Test coverage:"
+            grep "Ran [0-9]* test" fuzz-quick-results.txt || echo "Test count not found"
+            
+            if [ "$FAILED" -eq "0" ]; then
+              echo "✅ All fuzz tests passed"
+            else
+              echo "❌ Some fuzz tests failed"
+              echo "Review the detailed results below"
+            fi
+          else
+            echo "❌ Fuzz test results not found"
+            exit 1
+          fi
+
+      - name: Upload Fuzz Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: fuzz-quick-results
+          path: |
+            packages/our-implementation/fuzz-quick-results.txt
+          retention-days: 7
+
+      - name: Comment PR with Fuzz Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'packages/our-implementation/fuzz-quick-results.txt';
+            
+            if (fs.existsSync(path)) {
+              const results = fs.readFileSync(path, 'utf8');
+              
+              // Extract summary statistics
+              const passed = (results.match(/PASS/g) || []).length;
+              const failed = (results.match(/FAIL/g) || []).length;
+              
+              const comment = `## 🧪 Quick Fuzz Testing Results (15 min)
+              
+              **Test Summary**: ${passed} passed, ${failed} failed
+              
+              **Configuration**:
+              - Fuzz runs: 1000
+              - Max rejects: 100,000  
+              - Timeout: 15 minutes
+              
+              ${failed > 0 ? '⚠️ Some tests failed - review detailed results' : '✅ All fuzz tests passed'}
+              
+              <details>
+              <summary>Detailed Results</summary>
+              
+              \`\`\`
+              ${results.split('\n').slice(0, 100).join('\n')}
+              \`\`\`
+              
+              </details>
+              
+              📄 **Full results available in workflow artifacts**`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+  fuzz-summary:
+    name: Quick Fuzz Summary
+    needs: fuzz-testing-quick
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Fuzz Status
+        run: |
+          echo "=== QUICK FUZZ TESTING COMPLETE ==="
+          echo "Duration: 15 minutes"
+          echo "Coverage: Core security properties"
+          echo "Status: Completed"
+          echo "Next: Run extended fuzz testing for deeper analysis"

@@ -1,0 +1,52 @@
+{
+  "networks": {
+    "mainnet": {
+      "name": "Ethereum Mainnet",
+      "chainId": 1,
+      "rpc": "https://mainnet.tenderly.co/v1/YOUR_PROJECT_NAME",
+      "gasPrice": "auto",
+      "gasLimit": "auto"
+    },
+    "goerli": {
+      "name": "Goerli Testnet",
+      "chainId": 5,
+      "rpc": "https://goerli.tenderly.co/v1/YOUR_PROJECT_NAME",
+      "gasPrice": "auto",
+      "gasLimit": "auto"
+    },
+    "polygon": {
+      "name": "Polygon Mainnet",
+      "chainId": 137,
+      "rpc": "https://polygon.tenderly.co/v1/YOUR_PROJECT_NAME",
+      "gasPrice": "auto",
+      "gasLimit": "auto"
+    },
+    "arbitrum": {
+      "name": "Arbitrum One",
+      "chainId": 42143,
+      "rpc": "https://arbitrum.tenderly.co/v1/YOUR_PROJECT_NAME",
+      "gasPrice": "auto",
+      "gasLimit": "auto"
+    }
+  },
+  "deployment": {
+    "gasPrice": "auto",
+    "gasLimit": 30000000,
+    "confirmations": 2,
+    "timeout": 300,
+    "libraries": true,
+    "metadata": true
+  },
+  "testing": {
+    "gasReporting": true,
+    "coverage": true,
+    "fuzzing": true,
+    "parallel": true
+  },
+  "monitoring": {
+    "gasUsage": true,
+    "functionCalls": true,
+    "stateChanges": true,
+    "events": true
+  }
+}

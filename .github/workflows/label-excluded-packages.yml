@@ -1,0 +1,40 @@
+name: Label excluded packages
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check for excluded package changes
+        id: check_changes
+        run: |
+          # Get list of changed files
+          CHANGED_FILES=$(gh api repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files --jq '.[].filename')
+          
+          # Check if any changes are in excluded packages
+          EXCLUDED_CHANGED=false
+          if echo "$CHANGED_FILES" | grep -q "^packages/cardinal-poseidon2/"; then
+            EXCLUDED_CHANGED=true
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^packages/comparison-tools/"; then
+            EXCLUDED_CHANGED=true
+          fi
+          if echo "$CHANGED_FILES" | grep -q "^packages/zemse-poseidon2-evm/"; then
+            EXCLUDED_CHANGED=true
+          fi
+          
+          echo "excluded_changed=$EXCLUDED_CHANGED" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add labels
+        if: steps.check_changes.outputs.excluded_changed == 'true'
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: |
+            excluded-packages
+            no-review-required
+            benchmarking-only

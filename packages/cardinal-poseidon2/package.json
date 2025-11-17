@@ -1,0 +1,30 @@
+{
+  "name": "@poseidon2/cardinal-implementation",
+  "version": "1.0.0",
+  "description": "Cardinal Cryptography's Poseidon2 implementation - t=8 with BN254 field",
+  "main": "index.js",
+  "files": [
+    "*.sol",
+    "*.py",
+    "*.yul",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report",
+    "generate": "python3 generate_t8.py > Poseidon2T8Generated.yul"
+  },
+  "keywords": [
+    "poseidon2",
+    "cardinal",
+    "bn254",
+    "t8",
+    "blanksquare"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Cardinal-Cryptography/blanksquare-monorepo"
+  }
+}

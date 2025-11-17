@@ -1,0 +1,166 @@
+# GitHub Security Policy and Configuration
+
+name: Security Policy
+
+# Security contact information
+security:
+  contact: |
+    If you discover a security vulnerability, please follow our responsible disclosure process:
+    
+    1. **DO NOT** open a public issue
+    2. Email security concerns to: [security@yourproject.com]
+    3. Include detailed information about the vulnerability
+    4. Allow time for investigation and fix before disclosure
+    
+    We take security seriously and will respond promptly to legitimate security concerns.
+
+# Security analysis configuration
+analysis:
+  tools:
+    slither:
+      enabled: true
+      version: "0.11.3"
+      severity_threshold: "medium"
+      exclude:
+        - "test/"
+        - "script/"
+        - "packages/cardinal-poseidon2/"
+        - "packages/comparison-tools/"
+        - "packages/zemse-poseidon2-evm/"
+    
+    fuzzing:
+      enabled: true
+      tools:
+        - foundry
+      configurations:
+        quick:
+          duration: "15 minutes"
+          runs: 1000
+          priority: "high"
+        
+        extended:
+          duration: "5 hours"
+          runs: 50000
+          priority: "medium"
+          schedule: "weekly"
+
+# Automated security updates
+updates:
+  dependencies:
+    enabled: true
+    schedule: "weekly"
+    
+  submodules:
+    enabled: true
+    schedule: "monthly"
+
+# Security testing requirements
+testing:
+  required_checks:
+    - "slither-analysis"
+    - "fuzz-quick-security"
+    
+  optional_checks:
+    - "fuzz-extended-security"
+    - "gas-benchmarking"
+
+# Security review process
+review:
+  required_approvals:
+    core_changes: 2
+    security_changes: 3
+    
+  auto_approve:
+    - documentation_only
+    - benchmarking_packages
+    - test_fixtures
+
+# Vulnerability management
+vulnerabilities:
+  severity_levels:
+    critical: 24h response time
+    high: 72h response time
+    medium: 1 week response time
+    low: 1 month response time
+  
+  disclosure_policy: "responsible"
+  bounty_program: false
+
+# Security metrics and monitoring
+metrics:
+  track:
+    - test_coverage
+    - fuzz_coverage
+    - gas_efficiency
+    - dependency_vulnerabilities
+    - security_findings
+  
+  reporting:
+    schedule: "monthly"
+    format: "markdown"
+    
+# Security training and awareness  
+training:
+  required: true
+  topics:
+    - secure_coding_practices
+    - common_vulnerabilities
+    - gas_optimization_security
+    - smart_contract_security
+    
+# Incident response
+incident_response:
+  plan: "available"
+  contacts:
+    - security@yourproject.com
+    - lead-developer@yourproject.com
+  
+  procedures:
+    - vulnerability_assessment
+    - patch_development
+    - community_notification
+    - post_incident_review
+
+# Compliance and standards
+compliance:
+  standards:
+    - "SWC-registry" # Smart Contract Weakness Classification
+    - "EIP-20" # Token standard security
+    - "EIP-721" # NFT standard security
+  
+  audits:
+    frequency: "annual"
+    requirement: "recommended"
+    
+# Security tools integration
+tools:
+  enabled:
+    - "github_security_advisories"
+    - "dependabot"
+    - "codeql" (if available)
+    - "secret_scanning"
+  
+  configuration:
+    dependabot:
+      package_ecosystem: "npm"
+      directory: "/"
+      schedule: "weekly"
+      
+    secret_scanning:
+      enabled: true
+      push_protection: true
+
+# Security best practices
+best_practices:
+  enforce:
+    - two_factor_authentication
+    - signed_commits
+    - branch_protection
+    - required_status_checks
+    - code_owner_reviews
+    
+  recommend:
+    - security_mailing_list
+    - bug_bounty_program
+    - security_audit
+    - formal_verification

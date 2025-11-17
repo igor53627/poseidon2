@@ -1,0 +1,24 @@
+{
+  "name": "@poseidon2/comparison-tools",
+  "version": "1.0.0",
+  "description": "Comparison tools and benchmarks for Poseidon2 implementations",
+  "main": "index.js",
+  "files": [
+    "*.sol",
+    "*.js",
+    "README.md"
+  ],
+  "scripts": {
+    "benchmark": "forge script BenchmarkAll",
+    "compare": "forge script CompareAll",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report"
+  },
+  "keywords": [
+    "poseidon2",
+    "comparison",
+    "benchmark",
+    "analysis"
+  ],
+  "license": "MIT"
+}

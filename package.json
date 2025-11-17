@@ -1,0 +1,34 @@
+{
+  "name": "poseidon2-workspace",
+  "version": "1.0.0",
+  "description": "Poseidon2 hash function implementations comparison workspace",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report",
+    "benchmark": "forge script script/BenchmarkAll.s.sol",
+    "compare": "forge script script/CompareAll.s.sol",
+    "clean": "forge clean && rm -rf packages/*/out",
+    "fmt": "forge fmt"
+  },
+  "devDependencies": {
+    "forge-std": "github:foundry-rs/forge-std#v1.7.6"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "keywords": [
+    "poseidon2",
+    "hash",
+    "cryptography",
+    "zkp",
+    "solidity",
+    "comparison",
+    "benchmark"
+  ],
+  "license": "MIT"
+}

@@ -1,0 +1,28 @@
+{
+  "name": "@poseidon2/zemse-implementation",
+  "version": "1.0.0",
+  "description": "zemse/poseidon2-evm implementation - Reference implementation with BN254 field",
+  "main": "index.js",
+  "files": [
+    "*.sol",
+    "*.ts",
+    "README.md",
+    "gas-snapshot"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report"
+  },
+  "keywords": [
+    "poseidon2",
+    "reference",
+    "bn254",
+    "zemse"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/zemse/poseidon2-evm.git"
+  }
+}

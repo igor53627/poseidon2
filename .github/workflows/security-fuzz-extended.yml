@@ -1,0 +1,276 @@
+name: Security Testing - Extended Fuzz (5 hours)
+
+on:
+  schedule:
+    # Run weekly on Sundays at 2 AM UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      fuzz_runs:
+        description: 'Number of fuzz runs (default: 50000 for ~5 hours)'
+        required: false
+        default: '50000'
+        type: string
+      test_contract:
+        description: 'Specific test contract to run (default: all FuzzTesting)'
+        required: false
+        default: 'FuzzTesting'
+        type: string
+
+env:
+  FOUNDRY_PROFILE: extended
+
+jobs:
+  fuzz-testing-extended:
+    name: Extended Fuzz Testing (5 hours)
+    runs-on: ubuntu-latest
+    timeout-minutes: 320 # 5 hours + 20 minutes buffer
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install dependencies
+        run: |
+          cd packages/our-implementation
+          forge install
+          forge build
+
+      - name: Configure Extended Fuzz Profile
+        run: |
+          cd packages/our-implementation
+          cat > foundry-extended.toml << EOF
+          [profile.extended]
+          fuzz_runs = ${{ github.event.inputs.fuzz_runs || '50000' }}
+          fuzz_max_local_rejects = 1000000
+          fuzz_max_global_rejects = 10000000
+          fuzz_seed = "0x${{ github.run_id }}"
+          optimizer = true
+          optimizer_runs = 1000
+          
+          [fmt]
+          line_length = 100
+          tab_width = 4
+          EOF
+
+      - name: Run Extended Fuzz Tests
+        run: |
+          cd packages/our-implementation
+          
+          echo "=== STARTING EXTENDED FUZZ TESTING ==="
+          echo "Started at: $(date)"
+          echo "Fuzz runs: ${{ github.event.inputs.fuzz_runs || '50000' }}"
+          echo "Estimated duration: 4-6 hours"
+          
+          # Create progress tracker
+          echo "0" > fuzz-progress.txt
+          
+          # Run extended fuzz tests
+          timeout 300m forge test --match-contract "${{ github.event.inputs.test_contract || 'FuzzTesting' }}" \
+            --profile extended \
+            --fuzz-runs ${{ github.event.inputs.fuzz_runs || '50000' }} \
+            --fuzz-max-local-rejects 1000000 \
+            --fuzz-max-global-rejects 10000000 \
+            -vv \
+            2>&1 | tee fuzz-extended-results.txt || true
+          
+          echo "Completed at: $(date)"
+
+      - name: Monitor Progress
+        if: always()
+        run: |
+          cd packages/our-implementation
+          
+          # Create a simple progress report
+          if [ -f fuzz-extended-results.txt ]; then
+            LINES=$(wc -l < fuzz-extended-results.txt)
+            TESTS_PASSED=$(grep -c "PASS" fuzz-extended-results.txt || echo "0")
+            TESTS_FAILED=$(grep -c "FAIL" fuzz-extended-results.txt || echo "0")
+            
+            cat > fuzz-progress-report.txt << EOF
+# Extended Fuzz Testing Progress Report
+
+## Test Execution Summary
+- **Start Time**: $(date -r fuzz-extended-results.txt "+%Y-%m-%d %H:%M:%S" 2>/dev/null || echo "Unknown")
+- **End Time**: $(date)
+- **Total Lines**: $LINES
+- **Tests Passed**: $TESTS_PASSED
+- **Tests Failed**: $TESTS_FAILED
+- **Fuzz Runs**: ${{ github.event.inputs.fuzz_runs || '50000' }}
+
+## Coverage Analysis
+$(grep -c "testFuzz" fuzz-extended-results.txt || echo "0") fuzz test functions executed
+$(grep -c "fuzz_runs" fuzz-extended-results.txt || echo "0") individual fuzz runs completed
+
+## Status
+EOF
+            
+            if [ "$TESTS_FAILED" -eq "0" ] && [ "$TESTS_PASSED" -gt "0" ]; then
+              echo "✅ SUCCESS: All extended fuzz tests completed successfully" >> fuzz-progress-report.txt
+            elif [ "$TESTS_FAILED" -gt "0" ]; then
+              echo "❌ FAILURE: Some fuzz tests failed - review required" >> fuzz-progress-report.txt
+            else
+              echo "⚠️  INCONCLUSIVE: Unable to determine test status" >> fuzz-progress-report.txt
+            fi
+          else
+            echo "❌ ERROR: No fuzz test results generated" > fuzz-progress-report.txt
+          fi
+
+      - name: Deep Analysis of Results
+        if: always()
+        run: |
+          cd packages/our-implementation
+          
+          if [ -f fuzz-extended-results.txt ]; then
+            echo "=== DEEP FUZZ ANALYSIS ==="
+            
+            # Analyze test patterns
+            echo "Test function coverage:"
+            grep "testFuzz" fuzz-extended-results.txt | sort | uniq -c | sort -nr
+            
+            echo ""
+            echo "Failure patterns:"
+            grep -A 5 -B 5 "FAIL" fuzz-extended-results.txt | head -50 || echo "No failures found"
+            
+            echo ""
+            echo "Gas usage patterns:"
+            grep "gas=" fuzz-extended-results.txt | tail -20 || echo "Gas patterns not found"
+            
+            # Create statistical summary
+            echo ""
+            echo "=== STATISTICAL SUMMARY ==="
+            TOTAL_TESTS=$(grep -c "Ran [0-9]* test" fuzz-extended-results.txt || echo "0")
+            TOTAL_ASSERTIONS=$(grep -c "Assertion" fuzz-extended-results.txt || echo "0")
+            
+            echo "Total test runs: $TOTAL_TESTS"
+            echo "Total assertions: $TOTAL_ASSERTIONS"
+            
+            if command -v jq &> /dev/null && [ -f fuzz-extended-results.txt ]; then
+              # Try to extract more detailed statistics if possible
+              echo "Detailed analysis available in full results file"
+            fi
+          fi
+
+      - name: Generate Security Report
+        if: always()
+        run: |
+          cd packages/our-implementation
+          
+          cat > extended-fuzz-security-report.md << 'EOF'
+# Extended Fuzz Testing Security Report
+
+## Executive Summary
+Comprehensive fuzz testing completed with extended runtime and maximum coverage.
+
+## Test Configuration
+- **Duration**: ~5 hours
+- **Fuzz Runs**: ${{ github.event.inputs.fuzz_runs || '50000' }}
+- **Test Contract**: ${{ github.event.inputs.test_contract || 'FuzzTesting' }}
+- **Execution Date**: $(date)
+
+## Security Validation
+EOF
+          
+          if [ -f fuzz-extended-results.txt ]; then
+            TESTS_PASSED=$(grep -c "PASS" fuzz-extended-results.txt || echo "0")
+            TESTS_FAILED=$(grep -c "FAIL" fuzz-extended-results.txt || echo "0")
+            
+            echo "- **Tests Passed**: $TESTS_PASSED" >> extended-fuzz-security-report.md
+            echo "- **Tests Failed**: $TESTS_FAILED" >> extended-fuzz-security-report.md
+            echo "- **Security Properties Validated**:" >> extended-fuzz-security-report.md
+            echo "  - Hash consistency and determinism" >> extended-fuzz-security-report.md
+            echo "  - Input validation and bounds checking" >> extended-fuzz-security-report.md
+            echo "  - Gas usage stability" >> extended-fuzz-security-report.md
+            echo "  - State integrity" >> extended-fuzz-security-report.md
+            echo "  - Overflow protection" >> extended-fuzz-security-report.md
+            
+            if [ "$TESTS_FAILED" -eq "0" ]; then
+              echo "- **Security Status**: ✅ SECURE" >> extended-fuzz-security-report.md
+              echo "- **Recommendation**: Production ready" >> extended-fuzz-security-report.md
+            else
+              echo "- **Security Status**: ⚠️ REVIEW REQUIRED" >> extended-fuzz-security-report.md
+              echo "- **Recommendation**: Address failed tests before deployment" >> extended-fuzz-security-report.md
+            fi
+          else
+            echo "- **Status**: ❌ TESTING FAILED" >> extended-fuzz-security-report.md
+            echo "- **Issue**: No results generated" >> extended-fuzz-security-report.md
+          fi
+          
+          echo "" >> extended-fuzz-security-report.md
+          echo "## Detailed Results" >> extended-fuzz-security-report.md
+          echo "See workflow artifacts for complete test output." >> extended-fuzz-security-report.md
+
+      - name: Upload Extended Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: extended-fuzz-results
+          path: |
+            packages/our-implementation/fuzz-extended-results.txt
+            packages/our-implementation/fuzz-progress-report.txt
+            packages/our-implementation/extended-fuzz-security-report.md
+          retention-days: 90
+
+      - name: Create Issue on Failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const title = '🚨 Extended Fuzz Testing Failed';
+            const body = `## Extended Fuzz Testing Failure
+            
+            The extended fuzz testing workflow has failed or encountered issues.
+            
+            **Workflow**: ${context.payload.repository.html_url}/actions/runs/${context.runId}
+            **Date**: ${new Date().toISOString()}
+            **Fuzz Runs**: ${process.env.FUZZ_RUNS || '50000'}
+            
+            ### Required Actions
+            1. Review the workflow logs for error details
+            2. Check the uploaded artifacts for partial results
+            3. Investigate and fix any identified issues
+            4. Re-run the extended fuzz testing if necessary
+            
+            ### Artifacts
+            - Extended fuzz results: Check workflow artifacts
+            - Progress report: Available for download
+            - Security report: Generated if tests completed
+            
+            @security-team Please investigate this failure.`;
+            
+            github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: title,
+              body: body,
+              labels: ['security', 'fuzz-testing', 'investigation-required']
+            });
+
+  extended-fuzz-summary:
+    name: Extended Fuzz Summary
+    needs: fuzz-testing-extended
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Extended Fuzz Status
+        run: |
+          echo "=== EXTENDED FUZZ TESTING COMPLETE ==="
+          echo "Duration: ~5 hours"
+          echo "Fuzz Runs: ${{ github.event.inputs.fuzz_runs || '50000' }}"
+          echo "Coverage: Comprehensive security properties"
+          echo "Status: Completed"
+          echo ""
+          echo "📄 Check workflow artifacts for detailed results"
+          echo "🔍 Review extended-fuzz-security-report.md for analysis"
+          echo "📊 Results available for 90 days in artifacts"

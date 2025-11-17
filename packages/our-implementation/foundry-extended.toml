@@ -1,0 +1,67 @@
+# Extended Fuzz Testing Configuration
+# Used for comprehensive 5-hour security validation
+
+[profile.extended]
+# Fuzz testing configuration for extended security validation
+fuzz_runs = 50000                    # 50k runs for ~5 hours of testing
+fuzz_max_local_rejects = 1000000     # High rejection tolerance for edge cases
+fuzz_max_global_rejects = 10000000   # Very high global rejection limit
+fuzz_seed = "0x1234567890abcdef"     # Deterministic seed (overridden in CI)
+
+# Compiler optimization for extended testing
+optimizer = true
+optimizer_runs = 1000                # High optimization for realistic gas usage
+evm_version = "shanghai"
+solc_version = "0.8.30"
+
+# Memory and performance settings for long-running tests
+memory_limit = 67108864              # 64MB memory limit (2x default)
+
+# Test configuration
+timeout = 300                        # 5 minute timeout per test
+verbosity = 3                        # Detailed output for analysis
+
+# Gas reporting
+gas_reports = ["*"]                  # Report gas for all contracts
+gas_price = 0                        # Zero gas price for testing
+
+# Fuzz testing specific settings
+[fuzz]
+# Dictionary-based fuzzing for better coverage
+dictionary_weight = 80
+include_storage = true               # Fuzz storage variables
+include_push_bytes = true           # Include push bytes in fuzzing
+
+# Sequence fuzzing for stateful testing  
+sequence_length = 10                 # Length of transaction sequences
+sequence_weight = 20                 # Weight for sequence fuzzing
+
+# Coverage-guided fuzzing
+coverage = true                      # Enable coverage tracking
+coverage_ignore = [                  # Ignore these in coverage
+    "test/",
+    "script/"
+]
+
+# Performance settings for extended runs
+performance = true                   # Enable performance metrics
+performance_duration = 300           # Track performance over 5 minutes
+
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "preserve"
+override_spacing = false
+wrap_comments = true
+
+# RPC endpoints for fork testing (if needed)
+[rpc_endpoints]
+mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
+
+# Etherscan for verification (if needed)
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }

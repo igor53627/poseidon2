@@ -1,0 +1,22 @@
+{
+  "name": "@poseidon2/our-implementation",
+  "version": "1.0.0",
+  "description": "Our optimized Poseidon2 implementation with Goldilocks field",
+  "main": "index.js",
+  "files": [
+    "*.sol",
+    "README.md"
+  ],
+  "scripts": {
+    "build": "forge build",
+    "test": "forge test",
+    "test:gas": "forge test --gas-report"
+  },
+  "keywords": [
+    "poseidon2",
+    "hash",
+    "goldilocks",
+    "optimized"
+  ],
+  "license": "MIT"
+}

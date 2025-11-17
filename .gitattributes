@@ -1,0 +1,9 @@
+# Mark comparison and third-party packages as vendored code
+packages/cardinal-poseidon2/** linguist-vendored
+packages/comparison-tools/** linguist-vendored  
+packages/zemse-poseidon2-evm/** linguist-vendored
+
+# Also mark them as generated to reduce review noise
+packages/cardinal-poseidon2/** linguist-generated
+packages/comparison-tools/** linguist-generated
+packages/zemse-poseidon2-evm/** linguist-generated

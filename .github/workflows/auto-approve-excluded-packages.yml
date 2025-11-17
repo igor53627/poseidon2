@@ -1,0 +1,20 @@
+name: Auto-approve excluded packages
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    paths:
+      - 'packages/cardinal-poseidon2/**'
+      - 'packages/comparison-tools/**'
+      - 'packages/zemse-poseidon2-evm/**'
+
+jobs:
+  auto-approve:
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.changed_files, 'packages/cardinal-poseidon2/') || contains(github.event.pull_request.changed_files, 'packages/comparison-tools/') || contains(github.event.pull_request.changed_files, 'packages/zemse-poseidon2-evm/')
+    steps:
+      - name: Auto-approve PR for excluded packages
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          review-message: "Auto-approved: Changes only affect comparison/benchmarking packages that are excluded from review requirements."

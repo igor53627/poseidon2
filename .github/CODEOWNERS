@@ -1,0 +1,10 @@
+# Exclude comparison packages from requiring reviews
+# These are third-party implementations for benchmarking only
+packages/cardinal-poseidon2/** @ghost
+packages/comparison-tools/** @ghost  
+packages/zemse-poseidon2-evm/** @ghost
+
+# Or assign to a bot account if you have one
+# packages/cardinal-poseidon2/** @your-bot-account
+# packages/comparison-tools/** @your-bot-account
+# packages/zemse-poseidon2-evm/** @your-bot-account

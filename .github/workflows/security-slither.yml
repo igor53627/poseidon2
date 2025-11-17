@@ -1,0 +1,191 @@
+name: Security Analysis - Slither
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/our-implementation/**'
+      - '.github/workflows/security-slither.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'packages/our-implementation/**'
+      - '.github/workflows/security-slither.yml'
+  workflow_dispatch:
+    inputs:
+      detailed_analysis:
+        description: 'Run detailed analysis with all detectors'
+        required: false
+        default: 'false'
+        type: choice
+        options:
+          - 'true'
+          - 'false'
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  slither-analysis:
+    name: Slither Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install Slither
+        run: |
+          python -m pip install --upgrade pip
+          pip install slither-analyzer
+          slither --version
+
+      - name: Install dependencies
+        run: |
+          cd packages/our-implementation
+          forge install
+          forge build --build-info
+
+      - name: Run Slither Analysis (Standard)
+        if: github.event.inputs.detailed_analysis != 'true'
+        run: |
+          cd packages/our-implementation
+          slither . --json slither-report.json \
+            --exclude-informational \
+            --exclude-low \
+            --exclude-dependencies \
+            --exclude-optimization \
+            --solc-remaps @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/ \
+            || true
+          
+          # Also generate a human-readable report
+          slither . --txt slither-report.txt \
+            --exclude-informational \
+            --exclude-low \
+            --exclude-dependencies \
+            --exclude-optimization \
+            --solc-remaps @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/ \
+            || true
+
+      - name: Run Slither Analysis (Detailed)
+        if: github.event.inputs.detailed_analysis == 'true'
+        run: |
+          cd packages/our-implementation
+          slither . --json slither-detailed-report.json \
+            --exclude-dependencies \
+            --solc-remaps @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/ \
+            || true
+          
+          slither . --txt slither-detailed-report.txt \
+            --exclude-dependencies \
+            --solc-remaps @openzeppelin/contracts/=lib/openzeppelin-contracts/contracts/ \
+            || true
+
+      - name: Analyze Slither Results
+        run: |
+          cd packages/our-implementation
+          
+          if [ -f slither-report.json ]; then
+            echo "=== SLITHER ANALYSIS SUMMARY ==="
+            echo "Report generated successfully"
+            
+            # Count different severity levels
+            if command -v jq &> /dev/null; then
+              HIGH=$(jq '[.results.detectors[] | select(.impact == "High")] | length' slither-report.json 2>/dev/null || echo "0")
+              MEDIUM=$(jq '[.results.detectors[] | select(.impact == "Medium")] | length' slither-report.json 2>/dev/null || echo "0")
+              LOW=$(jq '[.results.detectors[] | select(.impact == "Low")] | length' slither-report.json 2>/dev/null || echo "0")
+              
+              echo "High severity issues: $HIGH"
+              echo "Medium severity issues: $MEDIUM"
+              echo "Low severity issues: $LOW"
+              
+              # Set status based on findings
+              if [ "$HIGH" -gt 0 ]; then
+                echo "❌ High severity issues found - review required"
+                exit 1
+              elif [ "$MEDIUM" -gt 0 ]; then
+                echo "⚠️  Medium severity issues found - review recommended"
+              else
+                echo "✅ No high/medium severity issues found"
+              fi
+            else
+              echo "✅ Slither analysis completed (jq not available for detailed analysis)"
+            fi
+          else
+            echo "❌ Slither report not generated"
+            exit 1
+          fi
+
+      - name: Upload Slither Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: slither-reports
+          path: |
+            packages/our-implementation/slither-*.json
+            packages/our-implementation/slither-*.txt
+          retention-days: 30
+
+      - name: Comment PR with Results
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const path = 'packages/our-implementation/slither-report.txt';
+            
+            if (fs.existsSync(path)) {
+              const report = fs.readFileSync(path, 'utf8');
+              const summary = report.split('\n').slice(0, 50).join('\n'); // First 50 lines
+              
+              const comment = `## 🔒 Slither Security Analysis Results
+              
+              Slither analysis completed for core implementation changes.
+              
+              ### Summary
+              \`\`\`
+              ${summary}
+              \`\`\`
+              
+              <details>
+              <summary>Full Report</summary>
+              
+              \`\`\`
+              ${report}
+              \`\`\`
+              
+              </details>
+              
+              📄 **Full reports available in workflow artifacts**`;
+              
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: comment
+              });
+            }
+
+  security-summary:
+    name: Security Summary
+    needs: slither-analysis
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Security Status
+        run: |
+          echo "=== SECURITY ANALYSIS COMPLETE ==="
+          echo "Slither static analysis: COMPLETED"
+          echo "Review artifacts: Available in workflow artifacts"
+          echo "Next step: Review findings and address any issues"

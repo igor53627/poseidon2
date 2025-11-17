@@ -1,0 +1,113 @@
+name: Smart PR Review Management
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  analyze-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      core_changes: ${{ steps.changes.outputs.core }}
+      excluded_changes: ${{ steps.changes.outputs.excluded }}
+      docs_changes: ${{ steps.changes.outputs.docs }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check what changed
+        id: changes
+        run: |
+          # Get changed files
+          CHANGED_FILES=$(git diff --name-only origin/main...HEAD)
+          echo "Changed files:"
+          echo "$CHANGED_FILES"
+          
+          # Check for core implementation changes
+          CORE_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(packages/our-implementation/|test/|script/)" || true)
+          
+          # Check for excluded package changes  
+          EXCLUDED_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^(packages/cardinal-poseidon2/|packages/comparison-tools/|packages/zemse-poseidon2-evm/)" || true)
+          
+          # Check for documentation changes
+          DOCS_CHANGES=$(echo "$CHANGED_FILES" | grep -E "^.*\.md$|^.github/" || true)
+          
+          # Set outputs
+          if [ -n "$CORE_CHANGES" ]; then
+            echo "core=true" >> $GITHUB_OUTPUT
+          else
+            echo "core=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if [ -n "$EXCLUDED_CHANGES" ]; then
+            echo "excluded=true" >> $GITHUB_OUTPUT
+          else
+            echo "excluded=false" >> $GITHUB_OUTPUT
+          fi
+          
+          if [ -n "$DOCS_CHANGES" ]; then
+            echo "docs=true" >> $GITHUB_OUTPUT
+          else
+            echo "docs=false" >> $GITHUB_OUTPUT
+          fi
+
+  manage-excluded-packages:
+    needs: analyze-changes
+    runs-on: ubuntu-latest
+    if: needs.analyze-changes.outputs.excluded_changes == 'true' && needs.analyze-changes.outputs.core_changes == 'false'
+    steps:
+      - name: Add excluded packages label
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: |
+            excluded-packages
+            benchmarking-only
+            fast-track
+            
+      - name: Auto-approve excluded package changes
+        uses: hmarr/auto-approve-action@v3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          review-message: |
+            🤖 **Auto-approved**: This PR only affects benchmarking/comparison packages that are excluded from detailed review.
+            
+            **Packages modified**:
+            - `packages/cardinal-poseidon2/` - Third-party implementation for comparison
+            - `packages/comparison-tools/` - Benchmarking utilities  
+            - `packages/zemse-poseidon2-evm/` - Reference implementation
+            
+            These packages are used for performance comparison and do not affect the security or functionality of our core implementation.
+
+  flag-core-changes:
+    needs: analyze-changes
+    runs-on: ubuntu-latest
+    if: needs.analyze-changes.outputs.core_changes == 'true'
+    steps:
+      - name: Add core changes label
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: |
+            requires-security-review
+            core-implementation
+            
+      - name: Comment on PR
+        uses: actions-ecosystem/action-create-comment@v1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          body: |
+            🔒 **Security Review Required**: This PR modifies core implementation files.
+            
+            **Changed core components**:
+            - `packages/our-implementation/` - Main implementation
+            - Test files - Security validation
+            - Script files - Deployment and utilities
+            
+            Please ensure:
+            - [ ] Slither analysis completed
+            - [ ] Fuzz tests pass
+            - [ ] Gas benchmarks updated
+            - [ ] Security documentation updated
+            
+            Reviewers: Please pay special attention to security implications.

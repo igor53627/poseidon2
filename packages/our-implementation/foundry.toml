@@ -1,0 +1,57 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+cache_path = "cache"
+
+# Solidity version
+solc_version = "0.8.30"
+evm_version = "shanghai"
+
+# Optimization
+optimizer = true
+optimizer_runs = 200
+
+# Gas reporting
+gas_reports = ["*"]
+
+# Fuzz testing
+fuzz_runs = 256
+fuzz_max_global_rejects = 65536
+
+# Invariant testing
+invariant_runs = 64
+invariant_depth = 15
+
+# Test configuration
+verbosity = 3
+
+# Memory limits
+memory_limit = 33554432
+
+[profile.optimized]
+optimizer = true
+optimizer_runs = 2000
+
+[profile.debug]
+optimizer = false
+
+[fmt]
+line_length = 100
+ tab_width = 4
+bracket_spacing = false
+int_types = "long"
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "preserve"
+override_spacing = false
+wrap_comments = true
+ignore = []
+
+[rpc_endpoints]
+mainnet = "https://eth-mainnet.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
+goerli = "https://eth-goerli.alchemyapi.io/v2/${ALCHEMY_API_KEY}"
+
+[etherscan]
+mainnet = { key = "${ETHERSCAN_API_KEY}" }
+goerli = { key = "${ETHERSCAN_API_KEY}" }
