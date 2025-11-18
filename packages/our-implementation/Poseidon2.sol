@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import "./Poseidon2Constants.sol";
+
 /**
  * @title Poseidon2 Hash Function
  * @author Poseidon2 Implementation Team
@@ -135,12 +137,8 @@ library Poseidon2 {
      * @notice Add round constants to state
      */
     function addRoundConstants(uint256[] memory state, uint256 round) internal pure {
-        // For now, using simplified round constants
-        // In production, these should be precomputed and stored
-        uint256 base = uint256(keccak256(abi.encodePacked("Poseidon2_round_constants", round)));
-        
         for (uint256 i = 0; i < state.length; i++) {
-            uint256 rc = uint256(keccak256(abi.encodePacked(base, i))) % P;
+            uint256 rc = Poseidon2Constants.getRoundConstant(round, i);
             state[i] = addmod(state[i], rc, P);
         }
     }
