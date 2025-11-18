@@ -145,6 +145,8 @@ library Poseidon2Constants {
                 rc[r][i] = ROUND_CONSTANTS_T12[r][i];
             }
         }
+
+        return rc;
     }
     
     // Optimized external matrix multiplication for t=12
