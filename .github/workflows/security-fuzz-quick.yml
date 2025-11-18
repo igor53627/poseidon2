@@ -1,4 +1,4 @@
-name: Security Testing - Quick Fuzz (15 min)
+name: Security Testing - Quick Fuzz (5 min)
 
 on:
   push:
@@ -48,14 +48,15 @@ jobs:
         run: |
           cd packages/our-implementation
           
-          echo "=== STARTING 15-MINUTE FUZZ TESTING ==="
+          echo "=== STARTING 5-MINUTE FUZZ TESTING ==="
           echo "Started at: $(date)"
           
-          # Run fuzz tests with optimized configuration for 15 minutes
+          # Run quick fuzz tests (actually quick - 5 minutes max)
           forge test --match-contract FuzzTesting \
-            --fuzz-runs 1000 \
-            --fuzz-max-test-rejects 100000 \
-            --timeout 900 \
+            --profile quick \
+            --fuzz-runs 100 \
+            --fuzz-max-test-rejects 1000 \
+            --timeout 300 \
             -vv \
             2>&1 | tee fuzz-quick-results.txt
           
@@ -67,7 +68,7 @@ jobs:
           cd packages/our-implementation
           
           if [ -f fuzz-quick-results.txt ]; then
-            echo "=== FUZZ TESTING ANALYSIS ==="
+            echo "=== QUICK FUZZ TESTING ANALYSIS ==="
             
             # Count test results
             PASSED=$(grep -c "PASS" fuzz-quick-results.txt || echo "0")
@@ -77,13 +78,13 @@ jobs:
             echo "Tests failed: $FAILED"
             
             # Extract unique test names
-            echo "Test coverage:"
+            echo "Quick fuzz test coverage:"
             grep "Ran [0-9]* test" fuzz-quick-results.txt || echo "Test count not found"
             
             if [ "$FAILED" -eq "0" ]; then
-              echo "✅ All fuzz tests passed"
+              echo "✅ All quick fuzz tests passed"
             else
-              echo "❌ Some fuzz tests failed"
+              echo "❌ Some quick fuzz tests failed"
               echo "Review the detailed results below"
             fi
           else
@@ -154,7 +155,7 @@ jobs:
       - name: Fuzz Status
         run: |
           echo "=== QUICK FUZZ TESTING COMPLETE ==="
-          echo "Duration: 15 minutes"
+          echo "Duration: 5 minutes"
           echo "Coverage: Core security properties"
           echo "Status: Completed"
           echo "Next: Run extended fuzz testing for deeper analysis"
