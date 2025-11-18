@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.30;
 
+import "./Poseidon2Constants.sol";
+
 /**
  * @title Poseidon2 Optimized Implementation
  * @notice High-performance implementation using assembly for critical paths
@@ -96,13 +98,15 @@ library Poseidon2Optimized {
      * @notice Optimized full round in assembly
      */
     function fullRoundAsm(uint256[] memory state, uint256 round) internal pure {
+        for (uint256 i = 0; i < T; i++) {
+            uint256 rc = Poseidon2Constants.getRoundConstant(round, i);
+            state[i] = addmod(state[i], rc, P);
+        }
+
         assembly {
             let p := P
             let statePtr := add(state, 0x20)
-            
-            // Add round constants (simplified for demo)
-            let rcBase := keccak256(0, 0) // Will be replaced with actual RC
-            
+
             // Apply S-box to all 12 elements
             for { let i := 0 } lt(i, 12) { i := add(i, 1) } {
                 let elemPtr := add(statePtr, mul(i, 0x20))
@@ -153,13 +157,15 @@ library Poseidon2Optimized {
      * @notice Optimized partial round in assembly
      */
     function partialRoundAsm(uint256[] memory state, uint256 round) internal pure {
+        for (uint256 i = 0; i < T; i++) {
+            uint256 rc = Poseidon2Constants.getRoundConstant(round, i);
+            state[i] = addmod(state[i], rc, P);
+        }
+
         assembly {
             let p := P
             let statePtr := add(state, 0x20)
-            
-            // Add round constants
-            // Simplified - use actual precomputed constants in production
-            
+
             // Apply S-box only to first element
             let firstElem := mload(statePtr)
             let x2 := mulmod(firstElem, firstElem, p)
